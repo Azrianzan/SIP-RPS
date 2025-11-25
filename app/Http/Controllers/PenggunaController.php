@@ -10,15 +10,32 @@ use Illuminate\Support\Facades\Hash;
 
 class PenggunaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Ambil semua user beserta info rolenya
-        $users = User::with('role')->get();
-        // Ambil role untuk dropdown tambah user
+        $query = User::with('role');
+
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            // Filter berdasarkan Nama ATAU Email
+            $query->where(function($q) use ($search) {
+                $q->where('nama', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Ambil hasil
+        $users = $query->latest()->get();
         $roles = Role::all();
-        
-        return view('pengguna.index', compact('users', 'roles'));
+
+        // Menghitung jumlah user berdasarkan nama role
+        $totalUser = User::count();
+        $totalAdmin = User::whereHas('role', function($q){ $q->where('nama_role', 'Admin'); })->count();
+        $totalPimpinan = User::whereHas('role', function($q){ $q->where('nama_role', 'Pimpinan'); })->count();
+        $totalPjl = User::whereHas('role', function($q){ $q->where('nama_role', 'PJL'); })->count();
+    
+        return view('pengguna.index', compact('users', 'roles', 'totalUser', 'totalAdmin', 'totalPimpinan', 'totalPjl'));
     }
+
 
     public function store(Request $request)
     {

@@ -6,7 +6,7 @@
 <div class="page-header">
     <h2>Detail Proyek</h2>
     <ul class="breadcrumb">
-        <li>Home</li>
+        <li>SIP-RPS</li>
         <li><a href="{{ route('proyek.index') }}">Kelola Proyek</a></li>
         <li>Detail Proyek</li>
     </ul>
@@ -124,8 +124,9 @@
     <div class="table-header">
         <h3>Riwayat Laporan Progres</h3>
         <div class="table-actions">
-            {{-- LOGIKA PERBAIKAN: Tombol Tambah Laporan HILANG jika Pimpinan --}}
-            @if(Auth::user()->role->nama_role !== 'Pimpinan')
+            {{-- LOGIKA UTAMA: Tombol Tambah Laporan HANYA UNTUK PJL --}}
+            {{-- Admin & Pimpinan TIDAK BISA MELIHAT TOMBOL INI --}}
+            @if(Auth::user()->role->nama_role === 'PJL')
                 <a href="{{ route('laporan.create', $proyek->id) }}" class="btn btn-primary">
                     + Tambah Laporan Baru
                 </a>
@@ -188,6 +189,7 @@
                         Detail
                     </button>
 
+                    {{-- LOGIKA VALIDASI: Tombol Setujui/Tolak HANYA untuk Admin & Pimpinan --}}
                     @if(in_array(Auth::user()->role->nama_role, ['Admin', 'Pimpinan']) && $laporan->status_validasi == 'Menunggu Validasi')
                         <div style="margin-top: 5px; display: flex; gap: 3px;">
                             <form action="{{ route('laporan.validasi', $laporan->id) }}" method="POST">

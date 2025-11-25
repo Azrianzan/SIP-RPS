@@ -23,4 +23,19 @@ class DashboardController extends Controller
             'totalProyek', 'proyekBerjalan', 'proyekSelesai', 'proyekTerlambat', 'recentProyek'
         ));
     }
+
+    public function getProjectsByStatus($status)
+    {
+        $query = Proyek::with('sekolah');
+
+        // Jika status bukan 'Total', filter berdasarkan status
+        // Jika 'Total', ambil semua
+        if ($status !== 'Total') {
+            $query->where('status_proyek', $status);
+        }
+
+        $projects = $query->latest()->get();
+
+        return response()->json($projects);
+    }
 }

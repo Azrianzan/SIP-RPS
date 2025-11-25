@@ -15,7 +15,7 @@
     
     /* Modal styles */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
-    .modal-content { background: white; border-radius: 8px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;}
+    .modal-content { background: white; border-radius: 8px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column;}
     .modal-header { padding: 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
     .modal-body { padding: 1.5rem; }
     .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 1rem; }
@@ -28,7 +28,7 @@
 <div class="page-header">
     <h2>Kelola Sekolah</h2>
     <ul class="breadcrumb">
-        <li>Home</li>
+        <li>SIP-RPS</li>
         <li>Kelola Sekolah</li>
     </ul>
 </div>
@@ -76,6 +76,17 @@
         </div>
     </div>
     
+    <!-- Error Server Side -->
+    @if ($errors->any())
+        <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+            <ul style="margin: 0; padding-left: 20px;">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <table>
         <thead>
             <tr>
@@ -133,13 +144,16 @@
                 <input type="hidden" name="_method" id="formMethod" value="POST">
                 <input type="hidden" id="schoolId" name="id">
                 
+                <!-- Nama Sekolah -->
                 <div class="form-group">
-                    <label>Nama Sekolah *</label>
+                    <label>Nama Sekolah <span style="color:red">*</span></label>
                     <input type="text" name="nama_sekolah" id="namaSekolah" class="form-control" required>
+                    <small id="error_namaSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama sekolah tidak boleh kosong</small>
                 </div>
                 
+                <!-- Jenjang -->
                 <div class="form-group">
-                    <label>Jenjang Pendidikan *</label>
+                    <label>Jenjang Pendidikan <span style="color:red">*</span></label>
                     <select name="jenjang" id="jenjangSekolah" class="form-control" required>
                         <option value="">Pilih Jenjang</option>
                         <option value="SD">SD</option>
@@ -148,21 +162,26 @@
                         <option value="SMK">SMK</option>
                         <option value="SLB">SLB</option>
                     </select>
+                    <small id="error_jenjangSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Pilih jenjang pendidikan</small>
                 </div>
                 
+                <!-- Alamat -->
                 <div class="form-group">
-                    <label>Alamat Lengkap *</label>
+                    <label>Alamat Lengkap <span style="color:red">*</span></label>
                     <textarea name="alamat" id="alamatSekolah" class="form-control" rows="3" required></textarea>
+                    <small id="error_alamatSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Alamat tidak boleh kosong</small>
                 </div>
                 
+                <!-- Kabupaten -->
                 <div class="form-group">
-                    <label>Kabupaten/Kota *</label>
+                    <label>Kabupaten/Kota <span style="color:red">*</span></label>
                     <select name="kabupaten_kota" id="kabupatenSekolah" class="form-control" required>
                         <option value="">Pilih Kabupaten</option>
                         @foreach(['Banjarmasin', 'Banjarbaru', 'Martapura', 'Barabai', 'Kandangan', 'Rantau', 'Amuntai', 'Kota Baru', 'Batulicin', 'Paringin'] as $kab)
                             <option value="{{ $kab }}">{{ $kab }}</option>
                         @endforeach
                     </select>
+                    <small id="error_kabupatenSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Pilih kabupaten/kota</small>
                 </div>
 
                 <div class="form-group">
@@ -171,10 +190,13 @@
                 </div>
                 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <!-- Telepon -->
                     <div class="form-group">
                         <label>Telepon</label>
-                        <input type="text" name="telepon" id="teleponSekolah" class="form-control">
+                        <input type="text" name="telepon" id="teleponSekolah" class="form-control" placeholder="Contoh: 08123456789">
+                        <small id="error_teleponSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Telepon hanya boleh berisi angka</small>
                     </div>
+                    <!-- Email -->
                     <div class="form-group">
                         <label>Email</label>
                         <input type="email" name="email" id="emailSekolah" class="form-control">
@@ -187,9 +209,11 @@
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <!-- Jumlah Siswa -->
                     <div class="form-group">
                         <label>Jumlah Siswa</label>
-                        <input type="number" name="jumlah_siswa" id="jumlahSiswa" class="form-control">
+                        <input type="number" name="jumlah_siswa" id="jumlahSiswa" class="form-control" min="0">
+                        <small id="error_jumlahSiswa" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Jumlah siswa tidak boleh negatif</small>
                     </div>
                     <div class="form-group">
                         <label>Kondisi</label>
@@ -204,7 +228,7 @@
                 
                 <div style="text-align:right; margin-top:20px;">
                     <button type="button" class="btn btn-outline" onclick="closeSchoolModal()">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">Simpan</button>
                 </div>
             </form>
         </div>
@@ -231,8 +255,6 @@
                     <div class="detail-item"><label>Siswa</label><span id="detailSiswa">-</span></div>
                     <div class="detail-item"><label>Kondisi</label><span id="detailKondisi">-</span></div>
                 </div>
-                
-                <!-- Bagian Peta Lokasi sudah dihapus -->
             </div>
             
             <div class="projects-list">
@@ -249,13 +271,84 @@
 </div>
 
 <script>
+    // --- LOGIKA VALIDASI ---
+    const submitBtn = document.getElementById('submitBtn');
+    const requiredFields = ['namaSekolah', 'jenjangSekolah', 'alamatSekolah', 'kabupatenSekolah'];
+    
+    const inputTelepon = document.getElementById('teleponSekolah');
+    const inputSiswa = document.getElementById('jumlahSiswa');
+
+    function validateSchoolForm() {
+        let isValid = true;
+
+        // 1. Cek Field Wajib (Nama, Jenjang, Alamat, Kab)
+        requiredFields.forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            const errorMsg = document.getElementById('error_' + fieldId);
+            
+            if (!input.value.trim()) {
+                errorMsg.style.display = 'block';
+                isValid = false;
+            } else {
+                errorMsg.style.display = 'none';
+            }
+        });
+
+        // 2. Cek Telepon (Hanya Angka)
+        const telVal = inputTelepon.value.trim();
+        const errorTel = document.getElementById('error_teleponSekolah');
+        // Regex: hanya angka 0-9
+        if (telVal && !/^\d+$/.test(telVal)) {
+            errorTel.style.display = 'block';
+            isValid = false;
+        } else {
+            errorTel.style.display = 'none';
+        }
+
+        // 3. Cek Jumlah Siswa (Tidak Negatif)
+        const siswaVal = inputSiswa.value;
+        const errorSiswa = document.getElementById('error_jumlahSiswa');
+        if (siswaVal && siswaVal < 0) {
+            errorSiswa.style.display = 'block';
+            isValid = false;
+        } else {
+            errorSiswa.style.display = 'none';
+        }
+
+        // Update Tombol
+        submitBtn.disabled = !isValid;
+        if (!isValid) {
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+        } else {
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        }
+    }
+
+    // Pasang Event Listener
+    requiredFields.forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', validateSchoolForm);
+        el.addEventListener('change', validateSchoolForm);
+    });
+    inputTelepon.addEventListener('input', validateSchoolForm);
+    inputSiswa.addEventListener('input', validateSchoolForm);
+
+
     // --- MODAL & AJAX LOGIC ---
+    
     function showAddSchoolModal() {
         document.getElementById('modalTitle').textContent = 'Tambah Sekolah Baru';
         const form = document.getElementById('schoolForm');
         form.reset();
         form.action = "{{ route('sekolah.store') }}"; // Reset ke route store
         document.getElementById('formMethod').value = "POST";
+        
+        // Reset Validasi Visual
+        document.querySelectorAll('small[id^="error_"]').forEach(e => e.style.display = 'none');
+        validateSchoolForm(); // Cek awal
+
         document.getElementById('schoolModal').style.display = 'flex';
     }
 
@@ -292,6 +385,10 @@
                 form.action = `/sekolah/${id}`;
                 document.getElementById('formMethod').value = "PUT"; // Method spoofing Laravel
                 
+                // Reset Validasi & Cek Ulang
+                document.querySelectorAll('small[id^="error_"]').forEach(e => e.style.display = 'none');
+                validateSchoolForm();
+
                 document.getElementById('schoolModal').style.display = 'flex';
             })
             .catch(err => alert('Gagal mengambil data sekolah'));

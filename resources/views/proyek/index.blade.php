@@ -6,7 +6,7 @@
 <div class="page-header">
     <h2>Kelola Proyek</h2>
     <ul class="breadcrumb">
-        <li>Home</li>
+        <li>SIP-RPS</li>
         <li>Kelola Proyek</li>
     </ul>
 </div>
@@ -15,24 +15,28 @@
     <div class="table-header">
         <h3>Daftar Proyek Rehabilitasi Sekolah</h3>
         <div class="table-actions">
-            <div class="search-box">
-                <input type="text" placeholder="Cari proyek...">
-            </div>
             
-            {{-- LOGIKA PERBAIKAN: Tombol Tambah HANYA untuk Admin --}}
+            <!-- Form Pencarian -->
+            <form action="{{ route('proyek.index') }}" method="GET" class="search-box">
+                <input type="text" name="search" placeholder="Cari proyek atau sekolah..." value="{{ request('search') }}">
+                <!-- Tombol submit hidden agar form bisa disubmit dengan Enter -->
+                <button type="submit" style="display: none;"></button>
+            </form>
+            
+            <!-- Tombol Tambah (Hanya Admin) -->
             @if(Auth::user()->role->nama_role === 'Admin')
                 <button class="btn btn-primary" onclick="showAddModal()">
                     + Tambah Proyek Baru
                 </button>
             @endif
-            {{-- Akhir Logika --}}
             
         </div>
     </div>
     
+    <!-- Alert Error PHP (Validasi Server) -->
     @if ($errors->any())
         <div style="background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
-            <ul>
+            <ul style="margin: 0; padding-left: 20px;">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
@@ -40,6 +44,7 @@
         </div>
     @endif
 
+    <!-- Tabel Data -->
     <table>
         <thead>
             <tr>
@@ -71,21 +76,16 @@
                     </span>
                 </td>
                 <td>
-                    <!-- Tombol Detail: Bisa diakses SEMUA user (Admin, Pimpinan, PJL) -->
                     <a href="{{ route('proyek.show', $proyek->id) }}" class="btn btn-outline">Detail</a>
                     
-                    {{-- LOGIKA PERBAIKAN: Tombol Edit & Hapus HANYA untuk Admin --}}
                     @if(Auth::user()->role->nama_role === 'Admin')
-                        <!-- TOMBOL EDIT -->
                         <button class="btn btn-outline" onclick="editProyek({{ $proyek->id }})">Edit</button>
                         
-                        <!-- TOMBOL HAPUS -->
                         <form action="{{ route('proyek.destroy', $proyek->id) }}" method="POST" style="display:inline" onsubmit="return confirm('Hapus proyek ini?')">
                             @csrf @method('DELETE')
                             <button type="submit" class="btn btn-danger">Hapus</button>
                         </form>
                     @endif
-                    {{-- Akhir Logika --}}
                 </td>
             </tr>
             @endforeach
@@ -93,8 +93,6 @@
     </table>
 </div>
 
-<!-- MODAL TAMBAH / EDIT PROYEK -->
-<!-- (Hanya dirender/berguna jika Admin, tapi dibiarkan ada agar JS tidak error saat admin login) -->
 <div id="proyekModal" class="modal">
     <div class="modal-content" style="max-width: 600px;">
         <div class="modal-header">
@@ -106,48 +104,65 @@
                 @csrf
                 <input type="hidden" name="_method" id="formMethod" value="POST">
                 
+                <!-- Input Nama Proyek -->
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Nama Proyek</label>
-                    <input type="text" name="nama_proyek" id="nama_proyek" class="form-control" required style="width:100%; padding:8px;">
+                    <label>Nama Proyek <span style="color:red">*</span></label>
+                    <input type="text" name="nama_proyek" id="nama_proyek" class="form-control" style="width:100%; padding:8px;">
+                    <small id="error_nama_proyek" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama proyek tidak boleh kosong</small>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <!-- Input Sekolah -->
                     <div class="form-group">
-                        <label>Sekolah</label>
-                        <select name="sekolah_id" id="sekolah_id" class="form-control" required style="width:100%; padding:8px;">
+                        <label>Sekolah <span style="color:red">*</span></label>
+                        <select name="sekolah_id" id="sekolah_id" class="form-control" style="width:100%; padding:8px;">
                             <option value="">Pilih Sekolah</option>
                             @foreach($sekolahs as $sekolah)
                                 <option value="{{ $sekolah->id }}">{{ $sekolah->nama_sekolah }}</option>
                             @endforeach
                         </select>
+                        <small id="error_sekolah_id" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Sekolah tidak boleh kosong</small>
                     </div>
+                    
+                    <!-- Input Anggaran -->
                     <div class="form-group">
-                        <label>Anggaran (Rp)</label>
-                        <input type="number" name="anggaran" id="anggaran" class="form-control" required style="width:100%; padding:8px;">
+                        <label>Anggaran (Rp) <span style="color:red">*</span></label>
+                        <input type="number" name="anggaran" id="anggaran" class="form-control" min="0" style="width:100%; padding:8px;">
+                        <small id="error_anggaran" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Anggaran tidak boleh kosong</small>
+                        <small id="anggaranNegativeError" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Anggaran tidak boleh negatif</small>
                     </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <!-- Input Tanggal Mulai -->
                     <div class="form-group">
-                        <label>Tanggal Mulai</label>
-                        <input type="date" name="tanggal_mulai" id="tanggal_mulai" class="form-control" required style="width:100%; padding:8px;">
+                        <label>Tanggal Mulai <span style="color:red">*</span></label>
+                        <input type="date" name="tanggal_mulai" id="tanggal_mulai" class="form-control" style="width:100%; padding:8px;">
+                        <small id="error_tanggal_mulai" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Tanggal mulai tidak boleh kosong</small>
                     </div>
+                    
+                    <!-- Input Tanggal Selesai -->
                     <div class="form-group">
-                        <label>Tanggal Selesai</label>
-                        <input type="date" name="tanggal_selesai" id="tanggal_selesai" class="form-control" required style="width:100%; padding:8px;">
+                        <label>Tanggal Selesai <span style="color:red">*</span></label>
+                        <input type="date" name="tanggal_selesai" id="tanggal_selesai" class="form-control" style="width:100%; padding:8px;">
+                        <small id="error_tanggal_selesai" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Tanggal selesai tidak boleh kosong</small>
+                        <small id="dateLogicError" style="color: red; display: none; font-size: 12px; margin-top:5px;">Tanggal selesai harus lebih akhir dari tanggal mulai</small>
                     </div>
                 </div>
 
+                <!-- Input PJL -->
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Penanggung Jawab Lapangan (PJL)</label>
-                    <select name="pjl_id" id="pjl_id" class="form-control" required style="width:100%; padding:8px;">
+                    <label>Penanggung Jawab Lapangan (PJL) <span style="color:red">*</span></label>
+                    <select name="pjl_id" id="pjl_id" class="form-control" style="width:100%; padding:8px;">
                         <option value="">Pilih PJL</option>
                         @foreach($pjls as $pjl)
                             <option value="{{ $pjl->id }}">{{ $pjl->nama }}</option>
                         @endforeach
                     </select>
+                    <small id="error_pjl_id" style="color: red; display: none; font-size: 12px; margin-top: 5px;">PJL tidak boleh kosong</small>
                 </div>
 
+                <!-- Input Status (Hanya muncul saat Edit) -->
                 <div class="form-group" id="statusGroup" style="margin-bottom: 15px; display: none;">
                     <label>Status Proyek</label>
                     <select name="status_proyek" id="status_proyek" class="form-control" style="width:100%; padding:8px;">
@@ -158,6 +173,7 @@
                     </select>
                 </div>
 
+                <!-- Input Deskripsi -->
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label>Deskripsi</label>
                     <textarea name="deskripsi" id="deskripsi" class="form-control" rows="3" style="width:100%; padding:8px;"></textarea>
@@ -165,7 +181,8 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" onclick="closeModal()">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <!-- ID submitBtn digunakan untuk disable jika tidak valid -->
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled style="opacity: 0.5; cursor: not-allowed;">Simpan Proyek</button>
                 </div>
             </form>
         </div>
@@ -178,6 +195,74 @@
     const methodInput = document.getElementById('formMethod');
     const title = document.getElementById('modalTitle');
     const statusGroup = document.getElementById('statusGroup');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Daftar ID input yang wajib diisi
+    const requiredFields = ['nama_proyek', 'sekolah_id', 'anggaran', 'tanggal_mulai', 'tanggal_selesai', 'pjl_id'];
+
+    // Fungsi Validasi Menyeluruh
+    function validateForm() {
+        let isValid = true;
+
+        // 1. Cek Apakah Ada Field Kosong
+        requiredFields.forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            const errorText = document.getElementById('error_' + fieldId);
+            
+            if (!input.value.trim()) {
+                errorText.style.display = 'block';
+                isValid = false;
+            } else {
+                errorText.style.display = 'none';
+            }
+        });
+
+        // 2. Cek Logika Tanggal
+        const tglMulai = document.getElementById('tanggal_mulai').value;
+        const tglSelesai = document.getElementById('tanggal_selesai').value;
+        const dateLogicError = document.getElementById('dateLogicError');
+
+        if (tglMulai && tglSelesai) {
+            if (new Date(tglSelesai) < new Date(tglMulai)) {
+                dateLogicError.style.display = 'block';
+                isValid = false;
+            } else {
+                dateLogicError.style.display = 'none';
+            }
+        } else {
+            dateLogicError.style.display = 'none';
+        }
+
+        // 3. Cek Anggaran Negatif
+        const anggaran = document.getElementById('anggaran').value;
+        const anggaranNegError = document.getElementById('anggaranNegativeError');
+        
+        if (anggaran && anggaran < 0) {
+            anggaranNegError.style.display = 'block';
+            isValid = false;
+        } else {
+            anggaranNegError.style.display = 'none';
+        }
+
+        // Update status tombol Submit
+        submitBtn.disabled = !isValid;
+        if (!isValid) {
+            submitBtn.style.opacity = '0.5';
+            submitBtn.style.cursor = 'not-allowed';
+        } else {
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        }
+    }
+
+    // Pasang Event Listener ke semua input wajib
+    requiredFields.forEach(fieldId => {
+        const input = document.getElementById(fieldId);
+        input.addEventListener('input', validateForm);
+        input.addEventListener('change', validateForm);
+    });
+
+    // --- LOGIKA MODAL ---
 
     function showAddModal() {
         form.reset();
@@ -186,6 +271,14 @@
         title.innerText = "Tambah Proyek Baru";
         statusGroup.style.display = 'none'; 
         
+        // Reset pesan error
+        document.querySelectorAll('small[id^="error_"]').forEach(el => el.style.display = 'none');
+        document.getElementById('dateLogicError').style.display = 'none';
+        document.getElementById('anggaranNegativeError').style.display = 'none';
+        
+        // Cek validasi awal (tombol akan disabled karena form kosong)
+        validateForm(); 
+
         modal.style.display = 'flex';
     }
 
@@ -206,6 +299,14 @@
                 methodInput.value = "PUT"; 
                 title.innerText = "Edit Data Proyek";
                 statusGroup.style.display = 'block'; 
+                
+                // Reset pesan error tampilan
+                document.querySelectorAll('small[id^="error_"]').forEach(el => el.style.display = 'none');
+                document.getElementById('dateLogicError').style.display = 'none';
+                document.getElementById('anggaranNegativeError').style.display = 'none';
+                
+                // Cek validasi (tombol aktif karena data terisi)
+                validateForm();
 
                 modal.style.display = 'flex';
             })

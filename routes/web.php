@@ -23,7 +23,6 @@ Route::middleware(['auth'])->group(function () {
     
     // Halaman Dashboard (Untuk Pimpinan)
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
 
     // Halaman Kelola Pengguna (Untuk Admin)
     Route::middleware(['isAdmin'])->group(function () {
@@ -59,4 +58,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ekspor-laporan/print', [LaporanController::class, 'printLaporan'])->name('ekspor.print');
     // Action Download CSV (Excel)
     Route::get('/ekspor-laporan/csv', [LaporanController::class, 'exportCsv'])->name('ekspor.csv');
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/detail/{status}', [DashboardController::class, 'getProjectsByStatus'])->name('dashboard.detail');
 });
