@@ -109,7 +109,6 @@
                         <button class="btn btn-outline btn-sm" onclick="viewSchoolDetails({{ $sekolah->id }})">Detail</button>
                         <button class="btn btn-outline btn-sm" onclick="editSchool({{ $sekolah->id }})">Edit</button>
                         
-                        <!-- PERUBAHAN: Tombol Hapus memicu Modal -->
                         <button class="btn btn-danger btn-sm" onclick="confirmDeleteSchool({{ $sekolah->id }}, '{{ $sekolah->nama_sekolah }}')">Hapus</button>
                     </div>
                 </td>
@@ -188,7 +187,7 @@
                 <div class="form-group">
                     <label>Kecamatan</label>
                     <input type="text" name="kecamatan" id="kecamatanSekolah" class="form-control" maxlength="50">
-                    <small id="error_kecamatanSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Kecamatan hanya boleh huruf (tanpa titik/strip/' )</small>
+                    <small id="error_kecamatanSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Kecamatan hanya boleh huruf dan spasi</small>
                 </div>
                 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
@@ -203,6 +202,8 @@
                         <label>Email</label>
                         <input type="email" name="email" id="emailSekolah" class="form-control" maxlength="100">
                         <small id="error_emailSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Format email tidak valid</small>
+                        <!-- Pesan Validasi Domain -->
+                        <small id="error_emailSekolah_domain" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Gunakan email resmi (contoh: @gmail.com, .sch.id, .go.id)</small>
                     </div>
                 </div>
 
@@ -210,7 +211,7 @@
                 <div class="form-group">
                     <label>Kepala Sekolah</label>
                     <input type="text" name="kepala_sekolah" id="kepalaSekolah" class="form-control" maxlength="100">
-                    <small id="error_kepalaSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama Kepala Sekolah hanya boleh huruf dan koma (tanpa titik/strip/' )</small>
+                    <small id="error_kepalaSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama Kepala Sekolah hanya boleh huruf dan koma</small>
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
@@ -317,7 +318,18 @@
     const alamatRegex = /^[a-zA-Z0-9\s\.\,\-\/]+$/;
     const kecamatanRegex = /^[a-zA-Z\s]+$/;
     const kepalaSekolahRegex = /^[a-zA-Z\s\,]+$/;
+    
+    // Regex Email Umum
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // --- CONFIG WHITELIST EMAIL ---
+    const allowedCommonDomains = [
+        'gmail.com', 'yahoo.com', 'yahoo.co.id', 
+        'outlook.com', 'hotmail.com', 'icloud.com'
+    ];
+    // Regex Domain Resmi (.go.id, .sch.id, dll)
+    const officialTLDRegex = /\.(go\.id|sch\.id|ac\.id|co\.id|or\.id|belajar\.id|edu|gov)$/;
+
 
     function validateSchoolForm() {
         let isValid = true;
@@ -399,15 +411,46 @@
             document.getElementById('error_jumlahSiswa').style.display = 'none';
         }
 
-        // --- 8. Validasi Email ---
-        const emailVal = inputEmail.value.trim();
-        if (emailVal && !emailRegex.test(emailVal)) {
-            document.getElementById('error_emailSekolah').style.display = 'block';
-            isValid = false;
+        // --- 8. Validasi Email (Dengan Whitelist) ---
+        const emailVal = inputEmail.value.trim().toLowerCase();
+        const errEmail = document.getElementById('error_emailSekolah');
+        const errEmailDomain = document.getElementById('error_emailSekolah_domain');
+
+        if (emailVal) {
+            // 8a. Cek Format Dasar
+            if (!emailRegex.test(emailVal)) {
+                errEmail.style.display = 'block';
+                errEmailDomain.style.display = 'none';
+                isValid = false;
+            } else {
+                errEmail.style.display = 'none';
+                
+                // 8b. Cek Domain Whitelist
+                const emailParts = emailVal.split('@');
+                let isDomainValid = false;
+
+                if (emailParts.length === 2) {
+                    const domain = emailParts[1];
+                    // Cek Whitelist umum ATAU regex resmi
+                    if (allowedCommonDomains.includes(domain) || officialTLDRegex.test(domain)) {
+                        isDomainValid = true;
+                    }
+                }
+
+                if (!isDomainValid) {
+                    errEmailDomain.style.display = 'block';
+                    isValid = false;
+                } else {
+                    errEmailDomain.style.display = 'none';
+                }
+            }
         } else {
-            document.getElementById('error_emailSekolah').style.display = 'none';
+            // Email opsional, jika kosong tidak error
+            errEmail.style.display = 'none';
+            errEmailDomain.style.display = 'none';
         }
 
+        // Update Tombol Submit
         submitBtn.disabled = !isValid;
         if (!isValid) {
             submitBtn.style.opacity = '0.5';
@@ -418,7 +461,7 @@
         }
     }
 
-    // Pasang Event Listener
+    // Pasang Event Listener ke semua input
     const inputs = [inputNama, inputAlamat, inputKecamatan, inputKepala, inputTelepon, inputSiswa, inputEmail, inputJenjang, inputKabupaten];
     inputs.forEach(el => {
         el.addEventListener('input', validateSchoolForm);

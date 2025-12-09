@@ -116,7 +116,7 @@
                     <div style="display: flex; gap: 5px;">
                         <button class="btn btn-outline" onclick="editPengguna({{ $user->id }})">Edit</button>
                         
-                        <!-- PERUBAHAN: Tombol Hapus memanggil fungsi JS, bukan submit form langsung -->
+                        <!-- Tombol Hapus memanggil fungsi JS -->
                         <button class="btn btn-danger" onclick="confirmDelete({{ $user->id }}, '{{ $user->nama }}')">Hapus</button>
                     </div>
                 </td>
@@ -153,9 +153,13 @@
                 <!-- Input Email -->
                 <div class="form-group" style="margin-bottom:15px;">
                     <label>Email <span style="color:red">*</span></label>
+                    <!-- Type email penting untuk checkValidity() -->
                     <input type="email" name="email" id="email" class="form-control" maxlength="255" required style="width:100%; padding:8px;">
                     <small id="error_email" style="color: red; display: none; font-size: 12px; margin-top:5px;">Email tidak boleh kosong</small>
-                    <small id="error_email_format" style="color: red; display: none; font-size: 12px; margin-top:5px;">Format email tidak valid (contoh: user@email.com)</small>
+                    <!-- Pesan Error untuk Domain Tidak Valid -->
+                    <small id="error_email_format" style="color: red; display: none; font-size: 12px; margin-top:5px;">
+                        Gunakan email resmi (contoh: @gmail.com, @yahoo.com, .go.id, .sch.id)
+                    </small>
                     <small id="error_email_duplicate" style="color: red; display: none; font-size: 12px; margin-top:5px;">Email ini sudah digunakan oleh pengguna lain</small>
                 </div>
                 
@@ -187,7 +191,7 @@
     </div>
 </div>
 
-<!-- MODAL KONFIRMASI HAPUS (BARU) -->
+<!-- MODAL KONFIRMASI HAPUS -->
 <div id="deleteModal" class="modal">
     <div class="modal-content" style="max-width: 400px; text-align: center;">
         <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
@@ -233,8 +237,16 @@
 
     // Regex untuk Nama: Hanya huruf, spasi, dan titik.
     const nameRegex = /^[a-zA-Z\s\.]+$/;
-    // Regex untuk Email: Format standar email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    // Daftar Domain Umum (Whitelist)
+    const allowedCommonDomains = [
+        'gmail.com', 'yahoo.com', 'yahoo.co.id', 
+        'outlook.com', 'hotmail.com', 'icloud.com'
+    ];
+    
+    // Regex untuk Domain Instansi/Resmi (Akhiran .id, .edu, .gov)
+    // Mencakup: .go.id, .sch.id, .ac.id, .co.id, .belajar.id, dll
+    const officialTLDRegex = /\.(go\.id|sch\.id|ac\.id|co\.id|or\.id|belajar\.id|edu|gov)$/;
 
     function validateForm() {
         let isValid = true;
@@ -258,9 +270,9 @@
             errNamaRegex.style.display = 'none';
         }
 
-        // 2. Validasi Email (Kosong, Format, & Unik)
+        // 2. Validasi Email (Kosong, Domain Valid, & Unik)
         const email = document.getElementById('email');
-        const emailVal = email.value.trim();
+        const emailVal = email.value.trim().toLowerCase(); // Normalize to lowercase
         const errEmail = document.getElementById('error_email');
         const errEmailFormat = document.getElementById('error_email_format');
         const errDuplicate = document.getElementById('error_email_duplicate');
@@ -270,21 +282,37 @@
             errEmailFormat.style.display = 'none';
             errDuplicate.style.display = 'none';
             isValid = false;
-        } else if (!emailRegex.test(emailVal)) {
-            errEmail.style.display = 'none';
-            errEmailFormat.style.display = 'block';
-            errDuplicate.style.display = 'none';
-            isValid = false;
         } else {
             errEmail.style.display = 'none';
-            errEmailFormat.style.display = 'none';
             
-            // Cek Unik
-            if (existingEmails.includes(emailVal) && emailVal !== currentEditingEmail) {
-                errDuplicate.style.display = 'block';
+            // LOGIKA BARU: Cek Validitas Domain
+            // 1. Cek struktur dasar email (ada @)
+            const emailParts = emailVal.split('@');
+            let isDomainValid = false;
+
+            if (emailParts.length === 2 && emailParts[0].length > 0 && emailParts[1].length > 0) {
+                const domain = emailParts[1];
+                
+                // Cek apakah domain ada di Whitelist ATAU memiliki ekstensi resmi
+                if (allowedCommonDomains.includes(domain) || officialTLDRegex.test(domain)) {
+                    isDomainValid = true;
+                }
+            }
+
+            if (!isDomainValid) {
+                errEmailFormat.style.display = 'block';
+                errDuplicate.style.display = 'none';
                 isValid = false;
             } else {
-                errDuplicate.style.display = 'none';
+                errEmailFormat.style.display = 'none';
+
+                // Cek Unik
+                if (existingEmails.includes(emailVal) && emailVal !== currentEditingEmail) {
+                    errDuplicate.style.display = 'block';
+                    isValid = false;
+                } else {
+                    errDuplicate.style.display = 'none';
+                }
             }
         }
 
@@ -355,7 +383,7 @@
                 document.getElementById('email').value = data.email;
                 document.getElementById('role_id').value = data.role_id;
                 
-                currentEditingEmail = data.email; 
+                currentEditingEmail = data.email.toLowerCase(); // Simpan email saat ini
 
                 form.action = `/kelola-pengguna/${id}`;
                 methodInput.value = "PUT"; 

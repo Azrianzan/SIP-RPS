@@ -23,8 +23,8 @@
                 <button type="submit" style="display: none;"></button>
             </form>
             
-            <!-- Tombol Tambah (Hanya Admin) -->
-            @if(Auth::user()->role->nama_role === 'Admin')
+            <!-- Tombol Tambah (Admin & Pimpinan) -->
+            @if(in_array(Auth::user()->role->nama_role, ['Admin', 'Pimpinan']))
                 <button class="btn btn-primary" onclick="showAddModal()">
                     + Tambah Proyek Baru
                 </button>
@@ -78,7 +78,8 @@
                 <td>
                     <a href="{{ route('proyek.show', $proyek->id) }}" class="btn btn-outline">Detail</a>
                     
-                    @if(Auth::user()->role->nama_role === 'Admin')
+                    <!-- Tombol Edit & Hapus (Admin & Pimpinan) -->
+                    @if(in_array(Auth::user()->role->nama_role, ['Admin', 'Pimpinan']))
                         <button class="btn btn-outline" onclick="editProyek({{ $proyek->id }})">Edit</button>
                         
                         <!-- Tombol Hapus memicu Modal -->
@@ -130,9 +131,10 @@
                     <div class="form-group">
                         <label>Anggaran (Rp) <span style="color:red">*</span></label>
                         <!-- Maxlength tidak berlaku di type number, gunakan max value -->
-                        <input type="number" name="anggaran" id="anggaran" class="form-control" min="0" max="999999999999999" required style="width:100%; padding:8px;">
+                        <input type="number" name="anggaran" id="anggaran" class="form-control" min="1" max="10000000000" required style="width:100%; padding:8px;">
                         <small id="error_anggaran" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Anggaran tidak boleh kosong</small>
-                        <small id="anggaranNegativeError" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Anggaran tidak boleh negatif</small>
+                        <small id="anggaranZeroError" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Anggaran tidak boleh 0 atau negatif</small>
+                        <small id="anggaranMaxError" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Anggaran maksimal 10 Miliar</small>
                     </div>
                 </div>
 
@@ -150,6 +152,7 @@
                         <input type="date" name="tanggal_selesai" id="tanggal_selesai" class="form-control" required style="width:100%; padding:8px;">
                         <small id="error_tanggal_selesai" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Tanggal selesai tidak boleh kosong</small>
                         <small id="dateLogicError" style="color: red; display: none; font-size: 12px; margin-top:5px;">Tanggal selesai harus lebih akhir dari tanggal mulai</small>
+                        <small id="dateMaxError" style="color: red; display: none; font-size: 12px; margin-top:5px;">Durasi proyek maksimal 10 tahun</small>
                     </div>
                 </div>
 
@@ -267,31 +270,60 @@
             }
         });
 
-        // 3. Cek Logika Tanggal
+        // 3. Cek Logika Tanggal & Durasi Maksimal 10 Tahun
         const tglMulai = document.getElementById('tanggal_mulai').value;
         const tglSelesai = document.getElementById('tanggal_selesai').value;
         const dateLogicError = document.getElementById('dateLogicError');
+        const dateMaxError = document.getElementById('dateMaxError');
 
         if (tglMulai && tglSelesai) {
-            if (new Date(tglSelesai) < new Date(tglMulai)) {
+            const start = new Date(tglMulai);
+            const end = new Date(tglSelesai);
+            
+            // Hitung tanggal 10 tahun ke depan dari tanggal mulai
+            const maxDate = new Date(start);
+            maxDate.setFullYear(start.getFullYear() + 10);
+
+            if (end < start) {
                 dateLogicError.style.display = 'block';
+                dateMaxError.style.display = 'none';
+                isValid = false;
+            } else if (end > maxDate) {
+                dateLogicError.style.display = 'none';
+                dateMaxError.style.display = 'block';
                 isValid = false;
             } else {
                 dateLogicError.style.display = 'none';
+                dateMaxError.style.display = 'none';
             }
         } else {
             dateLogicError.style.display = 'none';
+            dateMaxError.style.display = 'none';
         }
 
-        // 4. Cek Anggaran Negatif
+        // 4. Cek Anggaran (Tidak boleh 0 atau negatif, Max 10 Miliar)
         const anggaran = document.getElementById('anggaran').value;
-        const anggaranNegError = document.getElementById('anggaranNegativeError');
+        const anggaranZeroError = document.getElementById('anggaranZeroError');
+        const anggaranMaxError = document.getElementById('anggaranMaxError');
         
-        if (anggaran && anggaran < 0) {
-            anggaranNegError.style.display = 'block';
-            isValid = false;
+        if (anggaran) {
+            const val = parseFloat(anggaran);
+            if (val <= 0) {
+                anggaranZeroError.style.display = 'block';
+                anggaranMaxError.style.display = 'none';
+                isValid = false;
+            } else if (val > 10000000000) {
+                anggaranZeroError.style.display = 'none';
+                anggaranMaxError.style.display = 'block';
+                isValid = false;
+            } else {
+                anggaranZeroError.style.display = 'none';
+                anggaranMaxError.style.display = 'none';
+            }
         } else {
-            anggaranNegError.style.display = 'none';
+            // Kosong ditangani oleh requiredFields loop
+            anggaranZeroError.style.display = 'none';
+            anggaranMaxError.style.display = 'none';
         }
 
         // Update status tombol Submit
@@ -313,7 +345,6 @@
     });
 
     // --- LOGIKA MODAL TAMBAH/EDIT ---
-
     function showAddModal() {
         form.reset();
         form.action = "{{ route('proyek.store') }}"; 
@@ -324,7 +355,9 @@
         // Reset pesan error
         document.querySelectorAll('small[id^="error_"]').forEach(el => el.style.display = 'none');
         document.getElementById('dateLogicError').style.display = 'none';
-        document.getElementById('anggaranNegativeError').style.display = 'none';
+        document.getElementById('dateMaxError').style.display = 'none';
+        document.getElementById('anggaranZeroError').style.display = 'none';
+        document.getElementById('anggaranMaxError').style.display = 'none';
         
         // Cek validasi awal (tombol akan disabled karena form kosong)
         validateForm(); 
@@ -353,7 +386,9 @@
                 // Reset pesan error tampilan
                 document.querySelectorAll('small[id^="error_"]').forEach(el => el.style.display = 'none');
                 document.getElementById('dateLogicError').style.display = 'none';
-                document.getElementById('anggaranNegativeError').style.display = 'none';
+                document.getElementById('dateMaxError').style.display = 'none';
+                document.getElementById('anggaranZeroError').style.display = 'none';
+                document.getElementById('anggaranMaxError').style.display = 'none';
                 
                 // Cek validasi (tombol aktif karena data terisi)
                 validateForm();
@@ -371,7 +406,6 @@
     }
 
     // --- LOGIKA MODAL HAPUS ---
-
     function confirmDelete(id, name) {
         document.getElementById('deleteProjectName').innerText = name;
         deleteForm.action = `/kelola-proyek/${id}`;

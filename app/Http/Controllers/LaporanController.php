@@ -26,33 +26,39 @@ class LaporanController extends Controller
             'tanggal_laporan' => 'required|date',
             'progres_fisik' => 'required|numeric|min:0|max:100',
             'progres_keuangan' => 'required|numeric|min:0|max:100',
-            // 'judul_laporan' tidak ada di tabel database asli, jadi kita masukkan ke 'keterangan' atau abaikan
+            
+            // Validasi Dokumen Keuangan (Wajib, Format Dokumen, Max 5MB)
+            'dokumen_keuangan' => 'required|file|mimes:pdf,xls,xlsx,doc,docx|max:5120',
+            
             'keterangan' => 'required|string',
-            'photos.*' => 'image|mimes:jpeg,png,jpg|max:2048' // Maks 2MB per foto
+            'photos.*' => 'image|mimes:jpeg,png,jpg|max:2048'
         ]);
 
-        // Gunakan Transaction Database agar aman (jika upload gagal, data tidak tersimpan separuh)
         DB::transaction(function () use ($request, $proyek) {
             
-            // 2. Simpan Data Laporan Utama
+            // 2. Upload Dokumen Keuangan
+            $pathDokumen = null;
+            if ($request->hasFile('dokumen_keuangan')) {
+                // Simpan ke folder 'laporan-keuangan' di storage public
+                $pathDokumen = $request->file('dokumen_keuangan')->store('laporan-keuangan', 'public');
+            }
+
+            // 3. Simpan Data Laporan
             $laporan = Laporan::create([
                 'proyek_id' => $proyek->id,
-                'pelapor_id' => Auth::id(), // ID User yang sedang login
+                'pelapor_id' => Auth::id(),
                 'tanggal_laporan' => $request->tanggal_laporan,
                 'progres_fisik' => $request->progres_fisik,
                 'progres_keuangan' => $request->progres_keuangan,
-                // Kita gabungkan Judul (jika ada inputnya) ke keterangan, atau pakai keterangan saja
-                'keterangan' => $request->input('judul_laporan') . " - " . $request->keterangan,
+                'dokumen_keuangan' => $pathDokumen, // Simpan path file di sini
+                'keterangan' => $request->input('judul_laporan') ? $request->input('judul_laporan') . " - " . $request->keterangan : $request->keterangan,
                 'status_validasi' => 'Menunggu Validasi',
             ]);
 
-            // 3. Simpan Foto-foto (Jika ada)
+            // 4. Simpan Foto Dokumentasi (Jika ada)
             if ($request->hasFile('photos')) {
                 foreach ($request->file('photos') as $photo) {
-                    // Simpan file ke folder: storage/app/public/laporan-foto
                     $path = $photo->store('laporan-foto', 'public');
-
-                    // Simpan info file ke database
                     FotoLaporan::create([
                         'laporan_id' => $laporan->id,
                         'file_path' => $path,
@@ -62,15 +68,12 @@ class LaporanController extends Controller
             }
         });
 
-        // Redirect kembali ke halaman detail proyek
-        return redirect()->route('proyek.show', $proyek->id)
-                         ->with('success', 'Laporan progres berhasil ditambahkan!');
+        return redirect()->route('proyek.show', $proyek->id)->with('success', 'Laporan berhasil ditambahkan');
     }
 
     public function validasi(Request $request, $id)
     {
-        // Pastikan hanya Admin atau Pimpinan yang bisa validasi
-        // (Opsional: Bisa diperketat pakai Middleware, tapi cek manual di sini cukup utk sekarang)
+        // Cek Hak Akses
         $userRole = Auth::user()->role->nama_role;
         if (!in_array($userRole, ['Admin', 'Pimpinan'])) {
             abort(403, 'Anda tidak berhak memvalidasi laporan.');
@@ -78,9 +81,23 @@ class LaporanController extends Controller
 
         $laporan = Laporan::findOrFail($id);
         
-        // Update Status
-        $laporan->status_validasi = $request->status; // 'Disetujui' atau 'Ditolak'
-        $laporan->validator_id = Auth::id(); // Simpan siapa yang memvalidasi
+        // Logika Validasi
+        if ($request->status == 'Ditolak') {
+            // Jika Ditolak, Alasan Wajib Diisi
+            $request->validate([
+                'alasan_penolakan' => 'required|string|max:1000'
+            ], [
+                'alasan_penolakan.required' => 'Wajib menyertakan alasan penolakan agar PJL bisa memperbaiki laporan.'
+            ]);
+            
+            $laporan->alasan_penolakan = $request->alasan_penolakan;
+        } else {
+            // Jika Disetujui, kosongkan alasan (reset)
+            $laporan->alasan_penolakan = null;
+        }
+
+        $laporan->status_validasi = $request->status;
+        $laporan->validator_id = Auth::id();
         $laporan->save();
 
         return back()->with('success', 'Status laporan berhasil diperbarui menjadi: ' . $request->status);

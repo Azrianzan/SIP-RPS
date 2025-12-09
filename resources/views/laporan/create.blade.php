@@ -16,7 +16,7 @@
     <form action="{{ route('laporan.store', $proyek->id) }}" method="POST" enctype="multipart/form-data" id="laporanForm">
         @csrf
         
-        <!-- Informasi Proyek (Readonly) -->
+        <!-- Informasi Proyek -->
         <div class="form-group" style="margin-bottom: 1rem;">
             <label for="project">Proyek</label>
             <input type="text" class="form-control" value="{{ $proyek->nama_proyek }}" readonly style="background-color: #e9ecef;">
@@ -30,7 +30,7 @@
             <small id="error_report-date" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Tanggal laporan tidak boleh kosong</small>
         </div>
         
-        <!-- Progres Fisik & Keuangan -->
+        <!-- Progres Fisik & Keuangan (Persentase) -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
             <div class="form-group">
                 <label for="physical-progress">Progres Fisik (%) <span style="color:red">*</span></label>
@@ -44,6 +44,14 @@
                 <small id="error_financial-progress" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Wajib diisi (0-100)</small>
             </div>
         </div>
+
+        <!-- Dokumen Bukti Keuangan (BARU) -->
+        <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="dokumen-keuangan">Dokumen Bukti Keuangan <span style="color:red">*</span></label>
+            <input type="file" name="dokumen_keuangan" id="dokumen-keuangan" class="form-control" accept=".pdf,.xls,.xlsx,.doc,.docx" required>
+            <small style="color: #666; font-size: 11px;">Unggah bukti penggunaan anggaran (Format: PDF, Excel, Word. Max 5MB)</small>
+            <small id="error_dokumen-keuangan" style="color: red; display: none; font-size: 12px; margin-top: 5px; display: block;">Wajib mengunggah dokumen keuangan</small>
+        </div>
         
         <!-- Nama Pelapor (Readonly) -->
         <div class="form-group" style="margin-bottom: 1rem;">
@@ -56,7 +64,6 @@
             <label for="report-title">Judul Laporan <span style="color:red">*</span></label>
             <input type="text" name="judul_laporan" id="report-title" class="form-control" placeholder="Contoh: Laporan Minggu ke-3 Pemasangan Atap" maxlength="255" required>
             <small id="error_report-title" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Judul laporan tidak boleh kosong</small>
-            <!-- Pesan error diupdate -->
             <small id="error_report-title_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Judul hanya boleh huruf, angka, spasi, koma, dan strip</small>
         </div>
         
@@ -94,7 +101,6 @@
         var files   = document.querySelector('input[type=file]').files;
 
         function readAndPreview(file) {
-            // Validasi tipe gambar sederhana
             if ( /\.(jpe?g|png|gif)$/i.test(file.name) ) {
                 var reader = new FileReader();
 
@@ -116,24 +122,27 @@
             [].forEach.call(files, readAndPreview);
         }
         
-        // Trigger validasi ulang saat foto berubah
-        validateForm();
+        validateForm(); // Cek validasi saat foto dipilih
     }
 
     // --- 2. VALIDASI FORM ---
     const submitBtn = document.getElementById('submitBtn');
     
     // Daftar input text/number/date yang wajib
-    const inputs = ['report-date', 'physical-progress', 'financial-progress', 'report-title', 'description'];
+    const textInputs = ['report-date', 'physical-progress', 'financial-progress', 'report-title', 'description'];
+    
+    // Input File
+    const photoInput = document.getElementById('photos');
+    const docInput = document.getElementById('dokumen-keuangan');
 
-    // Regex Judul: Huruf, Angka, Spasi, Koma (,), Strip (-) -> Tanpa Titik
+    // Regex Judul
     const titleRegex = /^[a-zA-Z0-9\s\,\-]+$/;
 
     function validateForm() {
         let isValid = true;
 
-        // Cek Input Text/Number/Date
-        inputs.forEach(id => {
+        // A. Cek Input Text & Angka
+        textInputs.forEach(id => {
             const el = document.getElementById(id);
             const errorEl = document.getElementById('error_' + id);
             
@@ -142,20 +151,19 @@
                 if (errorEl) errorEl.style.display = 'block';
                 isValid = false;
             } else {
-                // Khusus Judul Laporan: Cek Regex Simbol
+                // Cek Regex Judul
                 if (id === 'report-title') {
                     const regexErrorEl = document.getElementById('error_report-title_regex');
-                    
                     if (!titleRegex.test(el.value)) {
-                        if (errorEl) errorEl.style.display = 'none'; // Sembunyikan error kosong
-                        if (regexErrorEl) regexErrorEl.style.display = 'block'; // Tampilkan error regex
+                        if (errorEl) errorEl.style.display = 'none';
+                        if (regexErrorEl) regexErrorEl.style.display = 'block';
                         isValid = false;
                     } else {
                         if (errorEl) errorEl.style.display = 'none';
                         if (regexErrorEl) regexErrorEl.style.display = 'none';
                     }
                 } 
-                // Khusus number: cek range 0-100
+                // Cek Range Angka (0-100)
                 else if (el.type === 'number') {
                     const val = parseFloat(el.value);
                     if (val < 0 || val > 100) {
@@ -173,8 +181,7 @@
             }
         });
 
-        // Cek Input File (Foto)
-        const photoInput = document.getElementById('photos');
+        // B. Cek Foto (Wajib)
         const photoError = document.getElementById('error_photos');
         if (photoInput.files.length === 0) {
             photoError.style.display = 'block';
@@ -183,7 +190,16 @@
             photoError.style.display = 'none';
         }
 
-        // Update status tombol submit
+        // C. Cek Dokumen Keuangan (Wajib)
+        const docError = document.getElementById('error_dokumen-keuangan');
+        if (docInput.files.length === 0) {
+            docError.style.display = 'block';
+            isValid = false;
+        } else {
+            docError.style.display = 'none';
+        }
+
+        // Update Tombol Submit
         submitBtn.disabled = !isValid;
         if (!isValid) {
             submitBtn.style.opacity = '0.5';
@@ -194,14 +210,14 @@
         }
     }
 
-    // Pasang Event Listener
-    inputs.forEach(id => {
+    textInputs.forEach(id => {
         const el = document.getElementById(id);
         el.addEventListener('input', validateForm);
         el.addEventListener('change', validateForm);
     });
 
-    // Cek validasi awal saat halaman dimuat
+    docInput.addEventListener('change', validateForm);
+
     document.addEventListener('DOMContentLoaded', validateForm);
 
 </script>

@@ -158,12 +158,6 @@
             </form>
             
             <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: #666; border-top: 1px solid #eee; padding-top: 1rem;">
-                <p style="margin-bottom: 5px;"><strong>Akun Testing</strong></p>
-                <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <span>Admin: dosenadmin@gmail.com / admin123</span>
-                    <span>Pimpinan: dosenpimpinan@gmail.com / pimpinan123</span>
-                    <span>PJL: dosenpjl@gmail.com / pjl123</span>
-                </div>
             </div>
         </div>
     </div>

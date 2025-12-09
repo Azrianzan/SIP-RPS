@@ -71,6 +71,7 @@ class ProyekController extends Controller
             $q->latest(); 
         }]);
 
+        // Ambil Laporan Valid Terakhir
         $laporanValidTerakhir = $proyek->laporan()
                                        ->where('status_validasi', 'Disetujui')
                                        ->orderBy('tanggal_laporan', 'desc')
@@ -80,7 +81,8 @@ class ProyekController extends Controller
         $progresFisik = $laporanValidTerakhir ? $laporanValidTerakhir->progres_fisik : 0;
         $progresKeuangan = $laporanValidTerakhir ? $laporanValidTerakhir->progres_keuangan : 0;
 
-        return view('proyek.show', compact('proyek', 'progresFisik', 'progresKeuangan'));
+        // PERUBAHAN: Tambahkan 'laporanValidTerakhir' ke compact agar bisa diakses di view
+        return view('proyek.show', compact('proyek', 'progresFisik', 'progresKeuangan', 'laporanValidTerakhir'));
     }
 
     public function getData($id)
