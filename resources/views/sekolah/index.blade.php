@@ -109,10 +109,8 @@
                         <button class="btn btn-outline btn-sm" onclick="viewSchoolDetails({{ $sekolah->id }})">Detail</button>
                         <button class="btn btn-outline btn-sm" onclick="editSchool({{ $sekolah->id }})">Edit</button>
                         
-                        <form action="{{ route('sekolah.destroy', $sekolah->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Hapus sekolah ini?')">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
-                        </form>
+                        <!-- PERUBAHAN: Tombol Hapus memicu Modal -->
+                        <button class="btn btn-danger btn-sm" onclick="confirmDeleteSchool({{ $sekolah->id }}, '{{ $sekolah->nama_sekolah }}')">Hapus</button>
                     </div>
                 </td>
             </tr>
@@ -149,7 +147,7 @@
                     <label>Nama Sekolah <span style="color:red">*</span></label>
                     <input type="text" name="nama_sekolah" id="namaSekolah" class="form-control" maxlength="100" required>
                     <small id="error_namaSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama sekolah tidak boleh kosong</small>
-                    <small id="error_namaSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama hanya boleh huruf dan angka (tanpa titik/strip/' )</small>
+                    <small id="error_namaSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama hanya boleh huruf, angka dan spasi (tanpa titik/strip/' )</small>
                 </div>
                 
                 <!-- Jenjang -->
@@ -278,6 +276,27 @@
     </div>
 </div>
 
+<!-- MODAL KONFIRMASI HAPUS (BARU) -->
+<div id="deleteSchoolModal" class="modal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+            <h3 style="color: #e74c3c; margin: 0;">Konfirmasi Hapus</h3>
+        </div>
+        <div class="modal-body">
+            <p>Apakah Anda yakin ingin menghapus sekolah <br><strong id="deleteSchoolName"></strong>?</p>
+            <p style="color: #666; font-size: 0.9rem;">Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+        <div class="modal-footer" style="justify-content: center; border-top: none; padding-top: 0;">
+            <button class="btn btn-outline" onclick="closeDeleteSchoolModal()">Batal</button>
+            <form id="deleteSchoolForm" method="POST" action="">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-danger">Ya, Hapus</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     // --- LOGIKA VALIDASI ---
     const submitBtn = document.getElementById('submitBtn');
@@ -294,19 +313,10 @@
     const inputKabupaten = document.getElementById('kabupatenSekolah');
 
     // REGEX PATTERNS 
-    // 1. Nama Sekolah: Huruf, Angka, Spasi (Tanpa titik, strip, petik)
     const namaSekolahRegex = /^[a-zA-Z0-9\s]+$/;
-
-    // 2. Alamat: Fleksibel (Huruf, Angka, Spasi, Titik, Koma, Strip, Slash)
     const alamatRegex = /^[a-zA-Z0-9\s\.\,\-\/]+$/;
-    
-    // 3. Kecamatan: Huruf, Spasi (Tanpa titik, strip)
     const kecamatanRegex = /^[a-zA-Z\s]+$/;
-    
-    // 4. Kepala Sekolah: Huruf, Spasi, Koma (untuk gelar, tanpa titik/petik)
     const kepalaSekolahRegex = /^[a-zA-Z\s\,]+$/;
-
-    // 5. Email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     function validateSchoolForm() {
@@ -353,7 +363,7 @@
             document.getElementById('error_alamatSekolah_regex').style.display = 'none';
         }
 
-        // --- 4. Validasi Kecamatan (Opsional tapi dicek jika diisi) ---
+        // --- 4. Validasi Kecamatan (Opsional) ---
         const kecVal = inputKecamatan.value.trim();
         if (kecVal && !kecamatanRegex.test(kecVal)) {
             document.getElementById('error_kecamatanSekolah_regex').style.display = 'block';
@@ -362,7 +372,7 @@
             document.getElementById('error_kecamatanSekolah_regex').style.display = 'none';
         }
 
-        // --- 5. Validasi Kepala Sekolah (Opsional tapi dicek jika diisi) ---
+        // --- 5. Validasi Kepala Sekolah (Opsional) ---
         const kepVal = inputKepala.value.trim();
         if (kepVal && !kepalaSekolahRegex.test(kepVal)) {
             document.getElementById('error_kepalaSekolah_regex').style.display = 'block';
@@ -398,7 +408,6 @@
             document.getElementById('error_emailSekolah').style.display = 'none';
         }
 
-        // Update Tombol Submit
         submitBtn.disabled = !isValid;
         if (!isValid) {
             submitBtn.style.opacity = '0.5';
@@ -409,7 +418,7 @@
         }
     }
 
-    // Pasang Event Listener ke semua input
+    // Pasang Event Listener
     const inputs = [inputNama, inputAlamat, inputKecamatan, inputKepala, inputTelepon, inputSiswa, inputEmail, inputJenjang, inputKabupaten];
     inputs.forEach(el => {
         el.addEventListener('input', validateSchoolForm);
@@ -423,13 +432,12 @@
         document.getElementById('modalTitle').textContent = 'Tambah Sekolah Baru';
         const form = document.getElementById('schoolForm');
         form.reset();
-        form.action = "{{ route('sekolah.store') }}"; // Reset ke route store
+        form.action = "{{ route('sekolah.store') }}"; 
         document.getElementById('formMethod').value = "POST";
         document.getElementById('schoolId').value = '';
         
-        // Reset Validasi Visual
         document.querySelectorAll('small[id^="error_"]').forEach(e => e.style.display = 'none');
-        validateSchoolForm(); // Cek awal (tombol akan disabled karena kosong)
+        validateSchoolForm(); 
 
         document.getElementById('schoolModal').style.display = 'flex';
     }
@@ -442,15 +450,12 @@
         document.getElementById('detailModal').style.display = 'none';
     }
 
-    // Fungsi Fetch Data untuk Edit
     function editSchool(id) {
-        // Ambil data dari server
         fetch(`/sekolah/${id}`)
             .then(response => response.json())
             .then(data => {
                 document.getElementById('modalTitle').textContent = 'Edit Data Sekolah';
                 
-                // Isi form dengan data
                 document.getElementById('schoolId').value = data.id;
                 document.getElementById('namaSekolah').value = data.nama_sekolah;
                 document.getElementById('jenjangSekolah').value = data.jenjang;
@@ -463,21 +468,18 @@
                 document.getElementById('jumlahSiswa').value = data.jumlah_siswa;
                 document.getElementById('kondisiSekolah').value = data.kondisi_sekolah;
                 
-                // Ubah action form ke update
                 const form = document.getElementById('schoolForm');
                 form.action = `/sekolah/${id}`;
                 document.getElementById('formMethod').value = "PUT"; 
                 
-                // Reset Validasi & Cek Ulang
                 document.querySelectorAll('small[id^="error_"]').forEach(e => e.style.display = 'none');
-                validateSchoolForm(); // Tombol aktif karena data terisi
+                validateSchoolForm(); 
 
                 document.getElementById('schoolModal').style.display = 'flex';
             })
             .catch(err => alert('Gagal mengambil data sekolah'));
     }
 
-    // Fungsi Fetch Data untuk Detail
     function viewSchoolDetails(id) {
         fetch(`/sekolah/${id}`)
             .then(response => response.json())
@@ -492,19 +494,16 @@
                 
                 const spanKondisi = document.getElementById('detailKondisi');
                 spanKondisi.textContent = data.kondisi_sekolah || '-';
-                // Reset class dan tambah class dinamis
                 spanKondisi.className = ''; 
                 if(data.kondisi_sekolah === 'Baik') spanKondisi.classList.add('status', 'berjalan');
                 else if(data.kondisi_sekolah === 'Rusak Berat') spanKondisi.classList.add('status', 'terlambat');
                 else spanKondisi.classList.add('status', 'selesai');
 
-                // Render List Proyek
                 const listContainer = document.getElementById('projectListContainer');
-                listContainer.innerHTML = ''; // Kosongkan dulu
+                listContainer.innerHTML = ''; 
                 
                 if(data.proyek && data.proyek.length > 0) {
                     data.proyek.forEach(p => {
-                        // Tentukan class status
                         let statusClass = 'selesai';
                         if(p.status_proyek === 'Berjalan') statusClass = 'berjalan';
                         if(p.status_proyek === 'Terlambat') statusClass = 'terlambat';
@@ -527,14 +526,24 @@
             });
     }
 
-    // Close Modal ketika klik di luar area konten
+    // --- LOGIKA MODAL HAPUS ---
+    const deleteSchoolModal = document.getElementById('deleteSchoolModal');
+    const deleteSchoolForm = document.getElementById('deleteSchoolForm');
+
+    function confirmDeleteSchool(id, name) {
+        document.getElementById('deleteSchoolName').innerText = name;
+        deleteSchoolForm.action = `/sekolah/${id}`; 
+        deleteSchoolModal.style.display = 'flex';
+    }
+
+    function closeDeleteSchoolModal() {
+        deleteSchoolModal.style.display = 'none';
+    }
+
     window.onclick = function(event) {
-        if (event.target == document.getElementById('schoolModal')) {
-            closeSchoolModal();
-        }
-        if (event.target == document.getElementById('detailModal')) {
-            closeDetailModal();
-        }
+        if (event.target == document.getElementById('schoolModal')) closeSchoolModal();
+        if (event.target == document.getElementById('detailModal')) closeDetailModal();
+        if (event.target == deleteSchoolModal) closeDeleteSchoolModal();
     }
 </script>
 @endsection

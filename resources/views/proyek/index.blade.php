@@ -19,6 +19,7 @@
             <!-- Form Pencarian -->
             <form action="{{ route('proyek.index') }}" method="GET" class="search-box">
                 <input type="text" name="search" placeholder="Cari proyek atau sekolah..." value="{{ request('search') }}">
+                <!-- Tombol submit hidden agar form bisa disubmit dengan Enter -->
                 <button type="submit" style="display: none;"></button>
             </form>
             
@@ -80,10 +81,8 @@
                     @if(Auth::user()->role->nama_role === 'Admin')
                         <button class="btn btn-outline" onclick="editProyek({{ $proyek->id }})">Edit</button>
                         
-                        <form action="{{ route('proyek.destroy', $proyek->id) }}" method="POST" style="display:inline" onsubmit="return confirm('Hapus proyek ini?')">
-                            @csrf @method('DELETE')
-                            <button type="submit" class="btn btn-danger">Hapus</button>
-                        </form>
+                        <!-- Tombol Hapus memicu Modal -->
+                        <button class="btn btn-danger" onclick="confirmDelete({{ $proyek->id }}, '{{ $proyek->nama_proyek }}')">Hapus</button>
                     @endif
                 </td>
             </tr>
@@ -193,9 +192,35 @@
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- MODAL KONFIRMASI HAPUS (BARU) -->
+<!-- ========================================== -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+            <h3 style="color: #e74c3c; margin: 0;">Konfirmasi Hapus</h3>
+        </div>
+        <div class="modal-body">
+            <p>Apakah Anda yakin ingin menghapus proyek <br><strong id="deleteProjectName"></strong>?</p>
+            <p style="color: #666; font-size: 0.9rem;">Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+        <div class="modal-footer" style="justify-content: center; border-top: none; padding-top: 0;">
+            <button class="btn btn-outline" onclick="closeDeleteModal()">Batal</button>
+            <form id="deleteForm" method="POST" action="">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-danger">Ya, Hapus</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+    // --- SETUP ELEMENT ---
     const modal = document.getElementById('proyekModal');
+    const deleteModal = document.getElementById('deleteModal');
     const form = document.getElementById('proyekForm');
+    const deleteForm = document.getElementById('deleteForm');
     const methodInput = document.getElementById('formMethod');
     const title = document.getElementById('modalTitle');
     const statusGroup = document.getElementById('statusGroup');
@@ -287,7 +312,7 @@
         input.addEventListener('change', validateForm);
     });
 
-    // --- LOGIKA MODAL ---
+    // --- LOGIKA MODAL TAMBAH/EDIT ---
 
     function showAddModal() {
         form.reset();
@@ -345,9 +370,25 @@
         modal.style.display = 'none';
     }
 
+    // --- LOGIKA MODAL HAPUS ---
+
+    function confirmDelete(id, name) {
+        document.getElementById('deleteProjectName').innerText = name;
+        deleteForm.action = `/kelola-proyek/${id}`;
+        deleteModal.style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        deleteModal.style.display = 'none';
+    }
+
+    // Tutup modal jika klik di luar
     window.onclick = function(event) {
         if (event.target == modal) {
             closeModal();
+        }
+        if (event.target == deleteModal) {
+            closeDeleteModal();
         }
     }
 

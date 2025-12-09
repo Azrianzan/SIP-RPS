@@ -116,11 +116,8 @@
                     <div style="display: flex; gap: 5px;">
                         <button class="btn btn-outline" onclick="editPengguna({{ $user->id }})">Edit</button>
                         
-                        <form action="{{ route('pengguna.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Yakin hapus data ini?')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger">Hapus</button>
-                        </form>
+                        <!-- PERUBAHAN: Tombol Hapus memanggil fungsi JS, bukan submit form langsung -->
+                        <button class="btn btn-danger" onclick="confirmDelete({{ $user->id }}, '{{ $user->nama }}')">Hapus</button>
                     </div>
                 </td>
             </tr>
@@ -190,9 +187,33 @@
     </div>
 </div>
 
+<!-- MODAL KONFIRMASI HAPUS (BARU) -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: none; padding-bottom: 0;">
+            <h3 style="color: #e74c3c; margin: 0;">Konfirmasi Hapus</h3>
+        </div>
+        <div class="modal-body">
+            <p>Apakah Anda yakin ingin menghapus pengguna <br><strong id="deleteUserName"></strong>?</p>
+            <p style="color: #666; font-size: 0.9rem;">Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+        <div class="modal-footer" style="justify-content: center; border-top: none; padding-top: 0;">
+            <button class="btn btn-outline" onclick="closeDeleteModal()">Batal</button>
+            <form id="deleteForm" method="POST" action="">
+                @csrf
+                @method('DELETE')
+                <button type="submit" class="btn btn-danger">Ya, Hapus</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+    // --- SETUP ELEMENT ---
     const modal = document.getElementById('penggunaModal');
+    const deleteModal = document.getElementById('deleteModal');
     const form = document.getElementById('penggunaForm');
+    const deleteForm = document.getElementById('deleteForm');
     const title = document.getElementById('modalTitle');
     const methodInput = document.getElementById('formMethod');
     const passHint = document.getElementById('passHint');
@@ -229,7 +250,6 @@
             errNamaRegex.style.display = 'none';
             isValid = false;
         } else if (!nameRegex.test(namaVal)) {
-            // Jika mengandung simbol selain huruf, spasi, dan titik
             errNama.style.display = 'none';
             errNamaRegex.style.display = 'block';
             isValid = false;
@@ -251,7 +271,6 @@
             errDuplicate.style.display = 'none';
             isValid = false;
         } else if (!emailRegex.test(emailVal)) {
-            // Jika format bukan email (misal tidak ada @)
             errEmail.style.display = 'none';
             errEmailFormat.style.display = 'block';
             errDuplicate.style.display = 'none';
@@ -306,25 +325,23 @@
         el.addEventListener('change', validateForm);
     });
 
-    // --- LOGIKA MODAL ---
+    // --- LOGIKA MODAL TAMBAH/EDIT ---
 
     function showAddModal() {
         isEditMode = false;
-        currentEditingEmail = ''; // Reset
+        currentEditingEmail = ''; 
 
         form.reset();
         form.action = "{{ route('pengguna.store') }}";
         methodInput.value = "POST";
         title.innerText = "Tambah Pengguna Baru";
         
-        // Atur Tampilan Password untuk Mode Tambah
-        reqPass.style.display = 'inline'; // Bintang merah muncul
+        reqPass.style.display = 'inline'; 
         passHint.style.display = 'none';
         
-        // Reset Error
         document.querySelectorAll('small[id^="error_"]').forEach(el => el.style.display = 'none');
         
-        validateForm(); // Cek awal (tombol akan disabled)
+        validateForm(); 
         modal.style.display = 'flex';
     }
 
@@ -338,20 +355,18 @@
                 document.getElementById('email').value = data.email;
                 document.getElementById('role_id').value = data.role_id;
                 
-                currentEditingEmail = data.email; // Simpan email saat ini
+                currentEditingEmail = data.email; 
 
                 form.action = `/kelola-pengguna/${id}`;
                 methodInput.value = "PUT"; 
                 title.innerText = "Edit Data Pengguna";
                 
-                // Atur Tampilan Password untuk Mode Edit
-                passwordInput.value = ""; // Kosongkan
-                reqPass.style.display = 'none'; // Sembunyikan bintang merah
-                passHint.style.display = 'inline'; // Tampilkan hint opsional
+                passwordInput.value = ""; 
+                reqPass.style.display = 'none'; 
+                passHint.style.display = 'inline'; 
                 
-                // Reset Error & Validasi
                 document.querySelectorAll('small[id^="error_"]').forEach(el => el.style.display = 'none');
-                validateForm(); // Cek (tombol harusnya aktif karena data terisi)
+                validateForm(); 
                 
                 modal.style.display = 'flex';
             })
@@ -362,9 +377,25 @@
         modal.style.display = 'none';
     }
 
+    // --- LOGIKA MODAL HAPUS ---
+
+    function confirmDelete(id, name) {
+        document.getElementById('deleteUserName').innerText = name;
+        deleteForm.action = `/kelola-pengguna/${id}`;
+        deleteModal.style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        deleteModal.style.display = 'none';
+    }
+
+    // Tutup modal jika klik di luar
     window.onclick = function(event) {
         if (event.target == modal) {
             closeModal();
+        }
+        if (event.target == deleteModal) {
+            closeDeleteModal();
         }
     }
 </script>
