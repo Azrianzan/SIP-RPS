@@ -54,8 +54,10 @@
         <!-- Judul Laporan -->
         <div class="form-group" style="margin-bottom: 1rem;">
             <label for="report-title">Judul Laporan <span style="color:red">*</span></label>
-            <input type="text" name="judul_laporan" id="report-title" class="form-control" placeholder="Contoh: Laporan Minggu ke-3 Pemasangan Atap" required>
+            <input type="text" name="judul_laporan" id="report-title" class="form-control" placeholder="Contoh: Laporan Minggu ke-3 Pemasangan Atap" maxlength="255" required>
             <small id="error_report-title" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Judul laporan tidak boleh kosong</small>
+            <!-- Pesan error diupdate -->
+            <small id="error_report-title_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Judul hanya boleh huruf, angka, spasi, koma, dan strip</small>
         </div>
         
         <!-- Deskripsi -->
@@ -124,6 +126,9 @@
     // Daftar input text/number/date yang wajib
     const inputs = ['report-date', 'physical-progress', 'financial-progress', 'report-title', 'description'];
 
+    // Regex Judul: Huruf, Angka, Spasi, Koma (,), Strip (-) -> Tanpa Titik
+    const titleRegex = /^[a-zA-Z0-9\s\,\-]+$/;
+
     function validateForm() {
         let isValid = true;
 
@@ -137,8 +142,21 @@
                 if (errorEl) errorEl.style.display = 'block';
                 isValid = false;
             } else {
+                // Khusus Judul Laporan: Cek Regex Simbol
+                if (id === 'report-title') {
+                    const regexErrorEl = document.getElementById('error_report-title_regex');
+                    
+                    if (!titleRegex.test(el.value)) {
+                        if (errorEl) errorEl.style.display = 'none'; // Sembunyikan error kosong
+                        if (regexErrorEl) regexErrorEl.style.display = 'block'; // Tampilkan error regex
+                        isValid = false;
+                    } else {
+                        if (errorEl) errorEl.style.display = 'none';
+                        if (regexErrorEl) regexErrorEl.style.display = 'none';
+                    }
+                } 
                 // Khusus number: cek range 0-100
-                if (el.type === 'number') {
+                else if (el.type === 'number') {
                     const val = parseFloat(el.value);
                     if (val < 0 || val > 100) {
                         if (errorEl) {

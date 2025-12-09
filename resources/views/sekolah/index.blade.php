@@ -147,8 +147,9 @@
                 <!-- Nama Sekolah -->
                 <div class="form-group">
                     <label>Nama Sekolah <span style="color:red">*</span></label>
-                    <input type="text" name="nama_sekolah" id="namaSekolah" class="form-control" required>
+                    <input type="text" name="nama_sekolah" id="namaSekolah" class="form-control" maxlength="100" required>
                     <small id="error_namaSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama sekolah tidak boleh kosong</small>
+                    <small id="error_namaSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama hanya boleh huruf dan angka (tanpa titik/strip/' )</small>
                 </div>
                 
                 <!-- Jenjang -->
@@ -168,8 +169,9 @@
                 <!-- Alamat -->
                 <div class="form-group">
                     <label>Alamat Lengkap <span style="color:red">*</span></label>
-                    <textarea name="alamat" id="alamatSekolah" class="form-control" rows="3" required></textarea>
+                    <textarea name="alamat" id="alamatSekolah" class="form-control" rows="3" maxlength="255" required></textarea>
                     <small id="error_alamatSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Alamat tidak boleh kosong</small>
+                    <small id="error_alamatSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Alamat mengandung karakter yang tidak diizinkan</small>
                 </div>
                 
                 <!-- Kabupaten -->
@@ -184,35 +186,40 @@
                     <small id="error_kabupatenSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Pilih kabupaten/kota</small>
                 </div>
 
+                <!-- Kecamatan -->
                 <div class="form-group">
                     <label>Kecamatan</label>
-                    <input type="text" name="kecamatan" id="kecamatanSekolah" class="form-control">
+                    <input type="text" name="kecamatan" id="kecamatanSekolah" class="form-control" maxlength="50">
+                    <small id="error_kecamatanSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Kecamatan hanya boleh huruf (tanpa titik/strip/' )</small>
                 </div>
                 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                     <!-- Telepon -->
                     <div class="form-group">
                         <label>Telepon</label>
-                        <input type="text" name="telepon" id="teleponSekolah" class="form-control" placeholder="Contoh: 08123456789">
+                        <input type="text" name="telepon" id="teleponSekolah" class="form-control" maxlength="15" placeholder="Contoh: 08123456789">
                         <small id="error_teleponSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Telepon hanya boleh berisi angka</small>
                     </div>
                     <!-- Email -->
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" name="email" id="emailSekolah" class="form-control">
+                        <input type="email" name="email" id="emailSekolah" class="form-control" maxlength="100">
+                        <small id="error_emailSekolah" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Format email tidak valid</small>
                     </div>
                 </div>
 
+                <!-- Kepala Sekolah -->
                 <div class="form-group">
                     <label>Kepala Sekolah</label>
-                    <input type="text" name="kepala_sekolah" id="kepalaSekolah" class="form-control">
+                    <input type="text" name="kepala_sekolah" id="kepalaSekolah" class="form-control" maxlength="100">
+                    <small id="error_kepalaSekolah_regex" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Nama Kepala Sekolah hanya boleh huruf dan koma (tanpa titik/strip/' )</small>
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                     <!-- Jumlah Siswa -->
                     <div class="form-group">
                         <label>Jumlah Siswa</label>
-                        <input type="number" name="jumlah_siswa" id="jumlahSiswa" class="form-control" min="0">
+                        <input type="number" name="jumlah_siswa" id="jumlahSiswa" class="form-control" min="0" max="99999">
                         <small id="error_jumlahSiswa" style="color: red; display: none; font-size: 12px; margin-top: 5px;">Jumlah siswa tidak boleh negatif</small>
                     </div>
                     <div class="form-group">
@@ -228,7 +235,8 @@
                 
                 <div style="text-align:right; margin-top:20px;">
                     <button type="button" class="btn btn-outline" onclick="closeSchoolModal()">Batal</button>
-                    <button type="submit" class="btn btn-primary" id="submitBtn">Simpan</button>
+                    <!-- ID submitBtn digunakan untuk disable via JS -->
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled style="opacity: 0.5; cursor: not-allowed;">Simpan</button>
                 </div>
             </form>
         </div>
@@ -273,49 +281,124 @@
 <script>
     // --- LOGIKA VALIDASI ---
     const submitBtn = document.getElementById('submitBtn');
-    const requiredFields = ['namaSekolah', 'jenjangSekolah', 'alamatSekolah', 'kabupatenSekolah'];
     
+    // Element Input
+    const inputNama = document.getElementById('namaSekolah');
+    const inputAlamat = document.getElementById('alamatSekolah');
+    const inputKecamatan = document.getElementById('kecamatanSekolah');
+    const inputKepala = document.getElementById('kepalaSekolah');
     const inputTelepon = document.getElementById('teleponSekolah');
     const inputSiswa = document.getElementById('jumlahSiswa');
+    const inputEmail = document.getElementById('emailSekolah');
+    const inputJenjang = document.getElementById('jenjangSekolah');
+    const inputKabupaten = document.getElementById('kabupatenSekolah');
+
+    // REGEX PATTERNS 
+    // 1. Nama Sekolah: Huruf, Angka, Spasi (Tanpa titik, strip, petik)
+    const namaSekolahRegex = /^[a-zA-Z0-9\s]+$/;
+
+    // 2. Alamat: Fleksibel (Huruf, Angka, Spasi, Titik, Koma, Strip, Slash)
+    const alamatRegex = /^[a-zA-Z0-9\s\.\,\-\/]+$/;
+    
+    // 3. Kecamatan: Huruf, Spasi (Tanpa titik, strip)
+    const kecamatanRegex = /^[a-zA-Z\s]+$/;
+    
+    // 4. Kepala Sekolah: Huruf, Spasi, Koma (untuk gelar, tanpa titik/petik)
+    const kepalaSekolahRegex = /^[a-zA-Z\s\,]+$/;
+
+    // 5. Email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     function validateSchoolForm() {
         let isValid = true;
 
-        // 1. Cek Field Wajib (Nama, Jenjang, Alamat, Kab)
-        requiredFields.forEach(fieldId => {
-            const input = document.getElementById(fieldId);
-            const errorMsg = document.getElementById('error_' + fieldId);
-            
-            if (!input.value.trim()) {
-                errorMsg.style.display = 'block';
-                isValid = false;
-            } else {
-                errorMsg.style.display = 'none';
-            }
-        });
+        // --- 1. Validasi Nama Sekolah ---
+        const namaVal = inputNama.value.trim();
+        if (!namaVal) {
+            document.getElementById('error_namaSekolah').style.display = 'block';
+            document.getElementById('error_namaSekolah_regex').style.display = 'none';
+            isValid = false;
+        } else if (!namaSekolahRegex.test(namaVal)) {
+            document.getElementById('error_namaSekolah').style.display = 'none';
+            document.getElementById('error_namaSekolah_regex').style.display = 'block';
+            isValid = false;
+        } else {
+            document.getElementById('error_namaSekolah').style.display = 'none';
+            document.getElementById('error_namaSekolah_regex').style.display = 'none';
+        }
 
-        // 2. Cek Telepon (Hanya Angka)
+        // --- 2. Validasi Jenjang & Kabupaten (Select) ---
+        if (!inputJenjang.value) {
+            document.getElementById('error_jenjangSekolah').style.display = 'block';
+            isValid = false;
+        } else { document.getElementById('error_jenjangSekolah').style.display = 'none'; }
+
+        if (!inputKabupaten.value) {
+            document.getElementById('error_kabupatenSekolah').style.display = 'block';
+            isValid = false;
+        } else { document.getElementById('error_kabupatenSekolah').style.display = 'none'; }
+
+        // --- 3. Validasi Alamat ---
+        const alamatVal = inputAlamat.value.trim();
+        if (!alamatVal) {
+            document.getElementById('error_alamatSekolah').style.display = 'block';
+            document.getElementById('error_alamatSekolah_regex').style.display = 'none';
+            isValid = false;
+        } else if (!alamatRegex.test(alamatVal)) {
+            document.getElementById('error_alamatSekolah').style.display = 'none';
+            document.getElementById('error_alamatSekolah_regex').style.display = 'block';
+            isValid = false;
+        } else {
+            document.getElementById('error_alamatSekolah').style.display = 'none';
+            document.getElementById('error_alamatSekolah_regex').style.display = 'none';
+        }
+
+        // --- 4. Validasi Kecamatan (Opsional tapi dicek jika diisi) ---
+        const kecVal = inputKecamatan.value.trim();
+        if (kecVal && !kecamatanRegex.test(kecVal)) {
+            document.getElementById('error_kecamatanSekolah_regex').style.display = 'block';
+            isValid = false;
+        } else {
+            document.getElementById('error_kecamatanSekolah_regex').style.display = 'none';
+        }
+
+        // --- 5. Validasi Kepala Sekolah (Opsional tapi dicek jika diisi) ---
+        const kepVal = inputKepala.value.trim();
+        if (kepVal && !kepalaSekolahRegex.test(kepVal)) {
+            document.getElementById('error_kepalaSekolah_regex').style.display = 'block';
+            isValid = false;
+        } else {
+            document.getElementById('error_kepalaSekolah_regex').style.display = 'none';
+        }
+
+        // --- 6. Validasi Telepon (Hanya Angka) ---
         const telVal = inputTelepon.value.trim();
-        const errorTel = document.getElementById('error_teleponSekolah');
-        // Regex: hanya angka 0-9
         if (telVal && !/^\d+$/.test(telVal)) {
-            errorTel.style.display = 'block';
+            document.getElementById('error_teleponSekolah').style.display = 'block';
             isValid = false;
         } else {
-            errorTel.style.display = 'none';
+            document.getElementById('error_teleponSekolah').style.display = 'none';
         }
 
-        // 3. Cek Jumlah Siswa (Tidak Negatif)
+        // --- 7. Validasi Jumlah Siswa (Tidak Negatif) ---
         const siswaVal = inputSiswa.value;
-        const errorSiswa = document.getElementById('error_jumlahSiswa');
         if (siswaVal && siswaVal < 0) {
-            errorSiswa.style.display = 'block';
+            document.getElementById('error_jumlahSiswa').style.display = 'block';
             isValid = false;
         } else {
-            errorSiswa.style.display = 'none';
+            document.getElementById('error_jumlahSiswa').style.display = 'none';
         }
 
-        // Update Tombol
+        // --- 8. Validasi Email ---
+        const emailVal = inputEmail.value.trim();
+        if (emailVal && !emailRegex.test(emailVal)) {
+            document.getElementById('error_emailSekolah').style.display = 'block';
+            isValid = false;
+        } else {
+            document.getElementById('error_emailSekolah').style.display = 'none';
+        }
+
+        // Update Tombol Submit
         submitBtn.disabled = !isValid;
         if (!isValid) {
             submitBtn.style.opacity = '0.5';
@@ -326,14 +409,12 @@
         }
     }
 
-    // Pasang Event Listener
-    requiredFields.forEach(id => {
-        const el = document.getElementById(id);
+    // Pasang Event Listener ke semua input
+    const inputs = [inputNama, inputAlamat, inputKecamatan, inputKepala, inputTelepon, inputSiswa, inputEmail, inputJenjang, inputKabupaten];
+    inputs.forEach(el => {
         el.addEventListener('input', validateSchoolForm);
         el.addEventListener('change', validateSchoolForm);
     });
-    inputTelepon.addEventListener('input', validateSchoolForm);
-    inputSiswa.addEventListener('input', validateSchoolForm);
 
 
     // --- MODAL & AJAX LOGIC ---
@@ -344,10 +425,11 @@
         form.reset();
         form.action = "{{ route('sekolah.store') }}"; // Reset ke route store
         document.getElementById('formMethod').value = "POST";
+        document.getElementById('schoolId').value = '';
         
         // Reset Validasi Visual
         document.querySelectorAll('small[id^="error_"]').forEach(e => e.style.display = 'none');
-        validateSchoolForm(); // Cek awal
+        validateSchoolForm(); // Cek awal (tombol akan disabled karena kosong)
 
         document.getElementById('schoolModal').style.display = 'flex';
     }
@@ -369,6 +451,7 @@
                 document.getElementById('modalTitle').textContent = 'Edit Data Sekolah';
                 
                 // Isi form dengan data
+                document.getElementById('schoolId').value = data.id;
                 document.getElementById('namaSekolah').value = data.nama_sekolah;
                 document.getElementById('jenjangSekolah').value = data.jenjang;
                 document.getElementById('alamatSekolah').value = data.alamat;
@@ -383,11 +466,11 @@
                 // Ubah action form ke update
                 const form = document.getElementById('schoolForm');
                 form.action = `/sekolah/${id}`;
-                document.getElementById('formMethod').value = "PUT"; // Method spoofing Laravel
+                document.getElementById('formMethod').value = "PUT"; 
                 
                 // Reset Validasi & Cek Ulang
                 document.querySelectorAll('small[id^="error_"]').forEach(e => e.style.display = 'none');
-                validateSchoolForm();
+                validateSchoolForm(); // Tombol aktif karena data terisi
 
                 document.getElementById('schoolModal').style.display = 'flex';
             })

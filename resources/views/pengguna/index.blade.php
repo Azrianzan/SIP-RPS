@@ -148,15 +148,17 @@
                 <!-- Input Nama -->
                 <div class="form-group" style="margin-bottom:15px;">
                     <label>Nama <span style="color:red">*</span></label>
-                    <input type="text" name="nama" id="nama" class="form-control" required style="width:100%; padding:8px;">
+                    <input type="text" name="nama" id="nama" class="form-control" maxlength="255" required style="width:100%; padding:8px;">
                     <small id="error_nama" style="color: red; display: none; font-size: 12px; margin-top:5px;">Nama tidak boleh kosong</small>
+                    <small id="error_nama_regex" style="color: red; display: none; font-size: 12px; margin-top:5px;">Nama hanya boleh berisi huruf, spasi, dan titik.</small>
                 </div>
                 
                 <!-- Input Email -->
                 <div class="form-group" style="margin-bottom:15px;">
                     <label>Email <span style="color:red">*</span></label>
-                    <input type="email" name="email" id="email" class="form-control" required style="width:100%; padding:8px;">
+                    <input type="email" name="email" id="email" class="form-control" maxlength="255" required style="width:100%; padding:8px;">
                     <small id="error_email" style="color: red; display: none; font-size: 12px; margin-top:5px;">Email tidak boleh kosong</small>
+                    <small id="error_email_format" style="color: red; display: none; font-size: 12px; margin-top:5px;">Format email tidak valid (contoh: user@email.com)</small>
                     <small id="error_email_duplicate" style="color: red; display: none; font-size: 12px; margin-top:5px;">Email ini sudah digunakan oleh pengguna lain</small>
                 </div>
                 
@@ -175,7 +177,7 @@
                 <!-- Input Password -->
                 <div class="form-group" style="margin-bottom:15px;">
                     <label>Password <span id="reqPass" style="color:red">*</span> <small id="passHint" style="color:#666; font-weight:normal; display:none;">(Kosongkan jika tidak ingin mengganti)</small></label>
-                    <input type="password" name="password" id="password" class="form-control" style="width:100%; padding:8px;">
+                    <input type="password" name="password" id="password" class="form-control" maxlength="255" style="width:100%; padding:8px;">
                     <small id="error_password" style="color: red; display: none; font-size: 12px; margin-top:5px;">Password wajib diisi untuk pengguna baru</small>
                 </div>
 
@@ -199,7 +201,6 @@
     const submitBtn = document.getElementById('submitBtn');
 
     // Ambil daftar email yang sudah ada dari PHP ke JS untuk validasi unik
-    // Pastikan di Controller Anda mengirim $users (semua user atau yang relevan)
     const existingEmails = @json($users->pluck('email'));
     
     // Variabel State
@@ -209,37 +210,62 @@
     // --- LOGIKA VALIDASI ---
     const inputs = ['nama', 'email', 'role_id', 'password'];
 
+    // Regex untuk Nama: Hanya huruf, spasi, dan titik.
+    const nameRegex = /^[a-zA-Z\s\.]+$/;
+    // Regex untuk Email: Format standar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     function validateForm() {
         let isValid = true;
 
         // 1. Validasi Nama
         const nama = document.getElementById('nama');
-        if (!nama.value.trim()) {
-            document.getElementById('error_nama').style.display = 'block';
+        const namaVal = nama.value.trim();
+        const errNama = document.getElementById('error_nama');
+        const errNamaRegex = document.getElementById('error_nama_regex');
+
+        if (!namaVal) {
+            errNama.style.display = 'block';
+            errNamaRegex.style.display = 'none';
+            isValid = false;
+        } else if (!nameRegex.test(namaVal)) {
+            // Jika mengandung simbol selain huruf, spasi, dan titik
+            errNama.style.display = 'none';
+            errNamaRegex.style.display = 'block';
             isValid = false;
         } else {
-            document.getElementById('error_nama').style.display = 'none';
+            errNama.style.display = 'none';
+            errNamaRegex.style.display = 'none';
         }
 
-        // 2. Validasi Email (Kosong & Unik)
+        // 2. Validasi Email (Kosong, Format, & Unik)
         const email = document.getElementById('email');
         const emailVal = email.value.trim();
-        const errorEmail = document.getElementById('error_email');
-        const errorDuplicate = document.getElementById('error_email_duplicate');
+        const errEmail = document.getElementById('error_email');
+        const errEmailFormat = document.getElementById('error_email_format');
+        const errDuplicate = document.getElementById('error_email_duplicate');
 
         if (!emailVal) {
-            errorEmail.style.display = 'block';
-            errorDuplicate.style.display = 'none';
+            errEmail.style.display = 'block';
+            errEmailFormat.style.display = 'none';
+            errDuplicate.style.display = 'none';
+            isValid = false;
+        } else if (!emailRegex.test(emailVal)) {
+            // Jika format bukan email (misal tidak ada @)
+            errEmail.style.display = 'none';
+            errEmailFormat.style.display = 'block';
+            errDuplicate.style.display = 'none';
             isValid = false;
         } else {
-            errorEmail.style.display = 'none';
+            errEmail.style.display = 'none';
+            errEmailFormat.style.display = 'none';
             
-            // Cek Unik: Jika email ada di database DAN bukan email yang sedang diedit
+            // Cek Unik
             if (existingEmails.includes(emailVal) && emailVal !== currentEditingEmail) {
-                errorDuplicate.style.display = 'block';
+                errDuplicate.style.display = 'block';
                 isValid = false;
             } else {
-                errorDuplicate.style.display = 'none';
+                errDuplicate.style.display = 'none';
             }
         }
 
